@@ -462,7 +462,7 @@ describe tb_ProdutoHistorico;
 
 -- exe 18
 
-alter table tb_ProdutoHistorico modify CodigoBarras int not null;
+alter table tb_ProdutoHistorico modify CodigoBarras numeric(14) not null;
 alter table tb_ProdutoHistorico drop primary key;
 alter table tb_ProdutoHistorico add constraint PK_Id_ProdutoHistorico primary key(CodigoBarras,Atualizacao,Ocorrencia);
 
@@ -483,3 +483,69 @@ end;
 //
 
 call spInsertProduto(12345678910119,"Agua mineral",1.99, 500);
+select * from tb_ProdutoHistorico;
+
+-- exe 20
+
+delimiter //
+create trigger TGR_ProdHistoricoUpdate after update on tbProduto
+	for each row
+begin
+insert into tb_ProdutoHistorico
+		set CodigoBarras = new.CodigoBarras,
+			NomeProd = new.NomeProd,
+            Valor = new.Valor,
+            Qtd = new.Qtd,
+            Atualizacao = current_timestamp(),
+            Ocorrencia = "Atualizado";
+end
+//
+
+
+
+call spUpdateProduto("Agua mineral",2.99, 12345678910119);
+call spUpdateProduto("Boneca de Plastico", 101.00, 12345678910199);
+
+
+
+-- exe 21
+select * from tbProduto;
+
+-- ex 22
+
+call spInsertVenda(4,"Disney Chaplin","26/08/2022",12345678910111,64.50,1,65.50,null);
+
+-- ex 23
+
+select * from tbVenda order by IdCli LIMIT 1 OFFSET 2;
+
+
+-- exe 24
+
+select * from tbItemVenda order by CodigoVenda desc LIMIT 1 ;
+
+
+-- exe 25
+
+delimiter $$
+create procedure spUpdateCliente(vNomeCli varchar(200), vNumEnd decimal(6,0), vCompEnd varchar(50), vCepCli decimal(8,0))
+begin
+	update tbCliente set NomeCli = vNomeCli, NumEnd = vNumEnd, CompEnd = vCompEnd where CepCli = vCepCli ;
+end
+$$
+
+call spUpdateCliente ("Disney Chapin", 89,"Ap. 12",12345053);
+
+select * from tbCliente;
+
+-- exe 26
+
+delimiter $$
+create procedure spUpdateQTDProduto(vQtd int )
+begin
+	update tbProduto set Qtd = vQtd ;
+end
+$$
+
+describe tbProduto;
+
