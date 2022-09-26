@@ -33,7 +33,7 @@ create table tbProduto(
 );
 
 create table tbVenda(
-	CodigoVenda numeric(10) primary key,
+	CodigoVenda numeric(10) primary key auto_increment,
     DataVenda date default(current_timestamp()),
     ValorTotal decimal(6,2) not null,
     QtdTotal int not null,
@@ -48,7 +48,7 @@ create table tbNotaFiscal(
 );
 
 create table tbItemVenda(
-	CodigoVenda numeric(10),
+	CodigoVenda numeric(10) auto_increment,
     CodigoBarras numeric(14),
     ValorItem decimal(5,2) not null,
     Qtd int not null,
@@ -345,32 +345,32 @@ select * from tbCompra;
 
 -- exe 10
 delimiter $$
-create procedure spInsertVenda(vCodigoVenda int,vCliente varchar(100), vDataVenda char(10), vCodigoBarras decimal(14,0), vValorItem decimal(5,2), vQtd int,vTotalVenda decimal (10,2), vNotaFiscal int)
+create procedure spInsertVenda(vCliente varchar(100), vCodigoBarras decimal(14,0), vQtd int)
 begin
-	declare vDataFormatada date;
 	if exists (select * from tbProduto,tbCliente where CodigoBarras = vCodigoBarras and NomeCli = vCliente) then
-		if not exists(select * from tbVenda where CodigoVenda = vCodigoVenda) then
-			set vDataFormatada = str_to_date(vDataVenda, '%d/%m/%Y');
+		if not exists(select * from tbVenda where IdCli = vCliente) then
+			set @DataVenda = current_timestamp();
 			set @idCliente = (select IdCli from tbCliente where NomeCli = vCliente);
-			insert into tbVenda(CodigoVenda,IdCli,DataVenda,ValorTotal,QtdTotal,NotaFiscal) values (vCodigoVenda,@idCliente,vDataFormatada,vTotalVenda,vQtd,vNotaFiscal);
+			insert into tbVenda(IdCli,CodigoBarras,QtdTotal) values (@idCliente,vCodigoBarras,vQtd);
 		end if;
-		if not exists(select * from tbItemVenda where CodigoVenda = vCodigoVenda and CodigoBarras = vCodigoBarras) then
-			insert into tbItemVenda(CodigoVenda,CodigoBarras,ValorItem,Qtd) values (vCodigoVenda,vCodigoBarras,vValorItem,vQtd);
+		if not exists(select * from tbItemVenda where @IdCli = vCliente and CodigoBarras = vCodigoBarras) then
+			insert into tbItemVenda(CodigoBarras,QtdTotal) values (vCliente,vCodigoBarras,vQtd);
         else
 			call spSelectErro('Venda desse produto','já');
 		end if;
     end if;
-	if not exists(select * from tbCliente where NomeCli = vCliente) then call spSelectErro("Produto","não"); end if;
-	if not exists(select * from tbProduto where CodigoBarras = vCodigoBarras) then call spSelectErro("Cliente","não"); end if;
+	if not exists(select * from tbCliente where NomeCli = vCliente) then call spSelectErro("Cliente","não"); end if;
+	if not exists(select * from tbProduto where CodigoBarras = vCodigoBarras) then call spSelectErro("Produto","não"); end if;
 end
 $$
 
-call spInsertVenda(1,"Pimpão","22/08/2022",12345678910111,54.61,1,54.61,null);
+drop procedure spInsertVenda;
+call spInsertVenda("Pimpão",12345678910111,1);
 call spInsertVenda(2,"Lança Perfume","22/08/2022",12345678910112,54.61,1,54.61,null);
 call spInsertVenda(3,"Pimpão","22/08/2022",12345678910113,100.45,2,200.90,null);
 select * from tbVenda;
 select * from tbItemVenda;
-
+describe tbVenda;
 
 -- exe 11
 delimiter $$
@@ -509,11 +509,13 @@ call spUpdateProduto("Boneca de Plastico", 101.00, 12345678910199);
 
 
 -- exe 21
+
 select * from tbProduto;
 
 -- ex 22
 
 call spInsertVenda(4,"Disney Chaplin","26/08/2022",12345678910111,64.50,1,65.50,null);
+select * from tbCliente;
 
 -- ex 23
 
@@ -540,12 +542,39 @@ select * from tbCliente;
 
 -- exe 26
 
-delimiter $$
-create procedure spUpdateQTDProduto(vQtd int )
+delimiter //
+create trigger TRG_UpdateProdutoQtd after insert on tbItemVenda
+for each row
 begin
-	update tbProduto set Qtd = vQtd ;
+	update tbProduto set Qtd = Qtd - new.Qtd where CodigoBarras = new.CodigoBarras;
 end
-$$
+//
 
-describe tbProduto;
+-- exe 27
 
+select * from tbProduto where CodigoBarras = 12345678910114;
+call spSelectProduto();
+call spInsertVenda(5, "Paganada", "26/09/2022",12345678910114, 10.00, 15, 150.00, null);
+
+-- exe 28
+call spSelectProduto();
+
+-- exe 29
+
+delimiter //
+create trigger TRG_UpdateCompraQtd after insert on tbCompraProduto
+for each row
+begin
+	update tbProduto set Qtd = Qtd + new.Qtd where CodigoBarras = new.CodigoBarras;
+end
+//
+
+select * from tbCompra;
+show tables;
+
+-- exe 30
+call spInsertCompra(10548,"Amoroso e Doce","10/09/2022", 12345678910111, 40.00, 100, 100, 4000.00);
+
+-- exe 31
+
+call spSelectProduto();
