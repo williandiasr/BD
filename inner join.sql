@@ -721,8 +721,59 @@ select * from tbEndereco;
 select * from tbCliente inner join tbClientepJ on tbCliente.IdCli = tbClientepJ.IdCli inner join tbEndereco on tbCliente.CepCli = tbEndereco.Cep;
 
 -- ex 37
-select * from tbEndereco;
-select * from tbCidade;
-select * from tbBairro;
-select * from tbEstado;
-select * from tbCliente inner join tbClientepJ on tbCliente.IdCli = tbClientepJ.IdCli inner join tbEndereco on tbCliente.CepCli = tbEndereco.Cep;
+select tbCliente.IdCli, NomeCli, CepCli, logradouro, NumEnd, CompEnd, Bairro, Cidade, Uf from tbCliente
+inner join tbClientePJ on tbCliente.IdCli = tbClientePJ.IdCli
+inner join tbEndereco on tbCliente.CepCli = tbEndereco.CEP
+inner join tbBairro on tbEndereco.IdBairro = tbBairro.IdBairro
+inner join tbCidade on tbEndereco.IdCidade = tbCidade.IdCidade
+inner join tbUf on tbEndereco.IdUf = tbUf.IdUf;
+
+-- ex 38
+delimiter $$
+create procedure spSelectClientePFisicaId(vIdCli int)
+begin
+	select tbCliente.IdCli as "Código",
+    NomeCli as "Nome", CPF as "CPF",
+    RG as "RG", Nasc as "Data de Nascimento",
+    logradouro as "Logradouro", NumEnd as "Número",
+    CompEnd as "Complemento", Bairro as "Bairro",
+    Cidade as "Cidade", Uf as "UF"
+	from tbCliente 
+	inner join tbClientePF on tbCliente.IdCli = tbClientePF.IdCli
+    inner join tbEndereco on tbEndereco.CEP = tbCliente.CepCli
+	inner join tbBairro on tbEndereco.IdBairro = tbBairro.IdBairro
+	inner join tbCidade on tbEndereco.IdCidade = tbCidade.IdCidade
+	inner join tbUf on tbEndereco.IdUf = tbUf.IdUf
+    where tbCliente.idCli = vIdCli;
+end
+$$
+delimiter ;
+call spSelectClientePFisicaId(2);
+call spSelectClientePFisicaId(5);
+
+-- ex 39
+select * from tbProduto
+left join tbItemVenda on tbProduto.CodigoBarras = tbItemVenda.CodigoBarras;
+
+-- ex 40
+select NotaFiscal, DataCompra, ValorTotal, QtdTotal, tbCompra.IdFornecedor as "Codigo", tbFornecedor.IdFornecedor as "Codigo", CNPJ, NomeFornecedor as "Nome", Telefone from tbCompra 
+right join tbFornecedor on tbCompra.IdFornecedor = tbFornecedor.IdFornecedor;
+
+-- ex 41
+select tbFornecedor.IdFornecedor as "Codigo", CNPJ, NomeFornecedor as "Nome", Telefone from tbCompra 
+right join tbFornecedor on tbCompra.IdFornecedor = tbFornecedor.IdFornecedor
+where tbCompra.IdFornecedor is null;
+
+-- ex 42
+select tbCliente.IdCli, NomeCli, DataVenda, tbProduto.CodigoBarras, tbProduto.NomeProd as "Nome", ValorItem from tbCliente
+left join tbVenda on tbCliente.IdCli = tbVenda.IdCli
+left join tbItemVenda on tbVenda.CodigoVenda = tbItemVenda.CodigoVenda 
+left join tbProduto on tbItemVenda.CodigoBarras = tbProduto.CodigoBarras
+where tbVenda.IdCli is not null order by NomeCli;
+
+-- ex 43
+select distinct Bairro from tbBairro
+left join tbEndereco on tbBairro.IdBairro = tbEndereco.IdBairro
+left join tbCliente on tbEndereco.CEP = tbCliente.CepCli
+left join tbVenda on tbCliente.IdCli = tbVenda.IdCli
+where tbVenda.IdCli is null;
